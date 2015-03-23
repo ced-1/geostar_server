@@ -106,7 +106,7 @@ router.post('/',function(req,res){
 					object= response.info;
 					docs= response.info.response.docs[0];
 					if(object.response.numFound!=0){	//Si le resultat contenait une correspondance avec les informations sur l'element recherche
-						dataresponse.push({id : response.objet, elt_id : docs.name, lat : docs.lat, lon : docs.lng, pop : docs.population, type : 2, err : 0});
+						dataresponse.push({elt_id : response.objet, elt_name : docs.name, lat : docs.lat, lon : docs.lng, pop : docs.population, type : 2, err : 0});
 						console.log(dataresponse);
 						}
 					else if(object.response.numFound==0){	//Pas de correspondance
