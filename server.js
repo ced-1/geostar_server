@@ -40,54 +40,99 @@ router.post('/',function(req,res){
 	var dataresponse = new Array;
 	var promessefinal= new Promise(
 		function(resolve,reject){
+	var compteur=0;
 	for (var i=0;i<liste.length;i++){
 		switch(checktype(liste[i].elt_id)){
-			case 0:	//Traitement du cas des coordonnees
-				var lat_lon=setcoord(liste[i].elt_id);
-				dataresponse.push({elt_id : liste[i].elt_id, lat : lat_lon[0], lon : lat_lon[1]});
+			case 0:		//Traitement des elements type coordonnees
+				var promesse= new Promise(function(resolve,reject){
+					resolve(setcoord(liste[i].elt_id));
+					});
+				promesse.done(function(response){			
+					dataresponse.push({elt_id : response[2], lat : response[0], lon : response[1], type : 0, err : 0});
+					compteur +=1;
+				if (compteur == liste.length){
+							resolve(dataresponse);
+							}
+				});
 				break;
-			case 1:	//Traitement du cas des IP
-				var ip = (liste[i].elt_id).replace(/ /g,"");
-				var geo = cities.getGeoDataSync(ip);
-				if(geo){	//Si l'IP est present dans la base de donnee, on place ses informations dans un objet JSON
-					dataresponse.push({elt_id : ip, lat : geo.location.latitude, lon : geo.location.longitude});
-				}
-			case 2:	//Traitement par gisgraphy
+			case 1:		//Traitement des elements type IP
+				var promesse= new Promise(function(resolve,reject){
+					var ip = (liste[i].elt_id).replace(/ /g,"");
+
+					cities.getGeoData(ip,function(err,geodata){
+					if(geodata){	//Si l'IP est present dans la base de donnee, on place ses informations dans un objet JSON
+						resolve({elt_id : ip, info : geodata});
+						}
+					else{	//On signale une erreur
+						resolve({elt_id : ip, type : 1, err : 1});
+				}});
+				});
+				promesse.done(function(response){
+					compteur +=1;
+					if (response.err==1){
+						dataresponse.push(response);
+					}
+					else{
+						console.log(response);
+						dataresponse.push({elt_id : response.elt_id , lat : response.info.location.latitude, lon : response.info.location.longitude, type : 1, err : 0});
+					}
+				
+					if (compteur == liste.length){				
+								resolve(dataresponse);
+						}
+					});
+				break
+			
+			case 2:	//Traitement des autres types d'elements via geocoder
 				var promesse= new Promise(
 					function(resolve,reject){
+				var dico =  {};
+				dico['objet'] = liste[i].elt_id;
 				var xhr= new XMLHttpRequest();
 				xhr.onload = function() {
-				if (xhr.status == 200) {
-					resolve(xhr.responseText);	//Si status requete 200, on stock le resultat de la requete
+				if (xhr.status == 200) {	//Si status requete 200, on stock le resultat de la requete
+					dico['info']=JSON.parse(xhr.responseText);	//parsing JSON du resultat de la requete
+					resolve(dico);
 					}
-				else{
-					reject(Error(xhr.status));	//On stock le code d'erreur
+				else if (xhr.status!=200){
+					reject(Error(xhr.status));
 					}
 				}
+
 				xhr.open("GET","http://localhost:8081/fulltext/fulltextsearch?q="+liste[i].elt_id+"&placetype=city&placetype=country&placetype=adm&__multiselect_placetype=&format=JSON&from=1&to=1",true)
 				xhr.send();});
 
 				promesse.then(function(response){
-					object=JSON.parse(response)		//parsing JSON du resultat de la requete
-					docs= object.response.docs[0];
-
-				},function(error){
-					console.log("Echec", error);});
-					
-				promesse.done(function(){
+					object= response.info;
+					docs= response.info.response.docs[0];
 					if(object.response.numFound!=0){	//Si le resultat contenait une correspondance avec les informations sur l'element recherche
-						dataresponse.push({elt_id: docs.name, lat: docs.lat, lon: docs.lng, pop: docs.population});	//On recupere les informations necessaire que l'on stocke dans un objet JSON
-						console.log(dataresponse);}
-					});
+						dataresponse.push({id : response.objet, elt_id : docs.name, lat : docs.lat, lon : docs.lng, pop : docs.population, type : 2, err : 0});
+						console.log(dataresponse);
+						}
+					else if(object.response.numFound==0){	//Pas de correspondance
+						dataresponse.push({id : response.objet, type: 2, err: 1});
+						}
+					
+
+				},function(error){	// Autres erreurs
+					console.log("Echec", error);
+					dataresponse.push({id : response.objet, type: 2, err: 2});
+				});
+					
+				promesse.done(function(response){
+						
+					compteur +=1
+					if (compteur== liste.length){
+						resolve(dataresponse);
+						}
+				});
 				break;
-				}
+			}
 				
-	}
-	//Timer pour gerer l'asynchronisme, nous permettant ainsi de ne pas attendre indefiniment les requetes qui n'aboutisse pas
-	setTimeout(function(){resolve(dataresponse);},300+liste.length*50);	
+		}
 	});
 	promessefinal.done(function(response){
-	res.send(JSON.stringify(response));		//Envoie du JSON contenant les information des differents elements recherches
+		res.send(JSON.stringify(response));	//Envoie du JSON contenant les information des differents elements recherches
 	});
 
 	
