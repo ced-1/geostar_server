@@ -73,7 +73,6 @@ router.post('/',function(req,res){
 						dataresponse.push(response);
 					}
 					else{
-						console.log(response);
 						dataresponse.push({elt_id : response.elt_id , lat : response.info.location.latitude, lon : response.info.location.longitude, type : 1, err : 0});
 					}
 				
@@ -107,16 +106,14 @@ router.post('/',function(req,res){
 					docs= response.info.response.docs[0];
 					if(object.response.numFound!=0){	//Si le resultat contenait une correspondance avec les informations sur l'element recherche
 						dataresponse.push({elt_id : response.objet, elt_name : docs.name, lat : docs.lat, lon : docs.lng, pop : docs.population, type : 2, err : 0});
-						console.log(dataresponse);
 						}
 					else if(object.response.numFound==0){	//Pas de correspondance
-						dataresponse.push({id : response.objet, type: 2, err: 1});
+						dataresponse.push({elt_id : response.objet, type: 2, err: 1});
 						}
 					
 
 				},function(error){	// Autres erreurs
-					console.log("Echec", error);
-					dataresponse.push({id : response.objet, type: 2, err: 2});
+					dataresponse.push({elt_id : response.objet, type: 2, err: 2});
 				});
 					
 				promesse.done(function(response){
