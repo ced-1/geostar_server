@@ -157,6 +157,7 @@ function checktype(elt){
 
 function setcoord(elt){
 	var tabcoord= elt.split(regsplitlatlon);
+		tabcoord.push(elt);
 	return tabcoord;
 };
 
