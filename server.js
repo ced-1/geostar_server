@@ -89,7 +89,7 @@ router.post('/',function(req,res){
 				xhr.onload = function() {
 				if (xhr.status == 200) {	//Si status requete 200, on stock le resultat de la requete
 					var res=JSON.parse(xhr.responseText);	//parsing JSON du resultat de la requete
-							
+					console.log(res.response.docs[0]);		
 					if(res.response.numFound!=0){	// Si correspondance, on passe la requete dans twofishes
 						var promesse= new Promise(
 						function(resolve,reject){
@@ -103,7 +103,7 @@ router.post('/',function(req,res){
 									}
 								}
 
-							xhr.open("GET","http://localhost:8083/?debug=0&responseIncludes=WKT_GEOMETRY_SIMPLIFIED&&query="+res.response.docs[0].fully_qualified_name,true);
+							xhr.open("GET","http://localhost:8083/?debug=0&responseIncludes=WKT_GEOMETRY_SIMPLIFIED&&query="+res.response.docs[0].name_ascii+","+res.response.docs[0].country_name,true);
 							xhr.send();
 							});
 
