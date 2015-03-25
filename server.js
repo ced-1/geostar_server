@@ -134,6 +134,7 @@ router.post('/',function(req,res){
 						var polygon_final= new Array();
 						var polygon_initial;
 						var nb_polygon;
+						if(geometry.wktGeometrySimplified){
 						if((geometry.wktGeometrySimplified).substring(0,5)=="MULTI"){	//dans le cas de multipolygon
 							polygon_initial=((geometry.wktGeometrySimplified).substring(15,((geometry.wktGeometrySimplified).length)-3)).split("), (");
 
@@ -161,8 +162,10 @@ router.post('/',function(req,res){
 						}
 						dataresponse.push({elt_id : response.objet, elt_name : response.info.displayName, lat : geometry.center.lat, lon : geometry.center.lng, bounds : geometry.bounds,'nb_polygon': nb_polygon, polygon: polygon_final, pop : response.info.attributes.population, type : 2, err : 0});
 					}
-					
-				},function(error){
+					else{
+						dataresponse.push({elt_id : response.objet, elt_name : response.info.displayName, lat : geometry.center.lat, lon : geometry.center.lng, bounds : geometry.bounds, pop : response.info.attributes.population, type : 2, err : 0});
+					}
+				}},function(error){
 					dataresponse.push({elt_id : response.objet, type: 2, err: 2});
 				});
 					
