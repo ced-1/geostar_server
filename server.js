@@ -156,7 +156,7 @@ router.post('/',function(req,res){
 							console.log(polygon_initial);
 							for ( var j=0;j < polygon_initial.length;j++){
 								var coord_polygon=polygon_initial[j].split(" ");
-								polygon_final.push([parseFloat(coord_polygon[1]),parseFloat(coord_polygon[0])]);
+								polygon_final.push([parseFloat(((coord_polygon[1].replace("(","")).replace("(",""))),parseFloat(((coord_polygon[0].replace("(","")).replace("(","")))]);
 							}
 							nb_polygon= 1
 						}
