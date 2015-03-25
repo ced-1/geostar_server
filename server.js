@@ -34,8 +34,6 @@ router.get('/test', function (req, res) { res.send("NodeJS fonctionne!") });
 
 router.post('/',function(req,res){
 	res.setHeader('Content-Type', 'application/json');
-	var object;
-	var docs;
 	var liste= (req.body.elt);
 	var dataresponse = new Array;
 	var promessefinal= new Promise(
@@ -90,8 +88,34 @@ router.post('/',function(req,res){
 				var xhr= new XMLHttpRequest();
 				xhr.onload = function() {
 				if (xhr.status == 200) {	//Si status requete 200, on stock le resultat de la requete
-					dico['info']=JSON.parse(xhr.responseText);	//parsing JSON du resultat de la requete
-					resolve(dico);
+					var res=JSON.parse(xhr.responseText);	//parsing JSON du resultat de la requete
+							
+					if(res.response.numFound!=0){	// Si correspondance, on passe la requete dans twofishes
+						var promesse= new Promise(
+						function(resolve,reject){
+							var xhr= new XMLHttpRequest();
+							xhr.onload = function() {
+								if (xhr.status == 200) {
+									resolve(JSON.parse(xhr.responseText));
+									}
+								else if (xhr.status!=200){
+									reject(Error(xhr.status));
+									}
+								}
+
+							xhr.open("GET","http://localhost:8083/?debug=0&responseIncludes=WKT_GEOMETRY_SIMPLIFIED&&query="+res.response.docs[0].fully_qualified_name,true);
+							xhr.send();
+							});
+
+						promesse.then(function(response){
+							dico['info']=response.interpretations[0].feature;	//Contient les valeurs utiles recupére depuis twofishes
+							resolve(dico);
+							});
+						}
+					else if(res.response.numFound==0){	//Sinon on signale qu'il n'y a pas de correspondance
+						dico['info']=0;
+						resolve(dico);
+						}
 					}
 				else if (xhr.status!=200){
 					reject(Error(xhr.status));
@@ -102,22 +126,47 @@ router.post('/',function(req,res){
 				xhr.send();});
 
 				promesse.then(function(response){
-					object= response.info;
-					docs= response.info.response.docs[0];
-					if(object.response.numFound!=0){	//Si le resultat contenait une correspondance avec les informations sur l'element recherche
-						dataresponse.push({elt_id : response.objet, elt_name : docs.name, lat : docs.lat, lon : docs.lng, pop : docs.population, type : 2, err : 0});
-						}
-					else if(object.response.numFound==0){	//Pas de correspondance
+					if(response.info==0){	//Pas de correspondance
 						dataresponse.push({elt_id : response.objet, type: 2, err: 1});
 						}
-					
+					else{	//Correspondance, traitement des polygones
+						var geometry=response.info.geometry;
+						var polygon_final= new Array();
+						var polygon_initial;
+						var nb_polygon;
+						if((geometry.wktGeometrySimplified).substring(0,5)=="MULTI"){	//dans le cas de multipolygon
+							polygon_initial=((geometry.wktGeometrySimplified).substring(15,((geometry.wktGeometrySimplified).length)-3)).split("), (");
 
-				},function(error){	// Autres erreurs
+							for (var j=0;j<polygon_initial.length;j++){
+								var polygon= new Array();
+								var multi_polygon= ((polygon_initial[j].replace("(","")).replace(")","")).split(", ");
+								for (var k=0;k<multi_polygon.length;k++){
+									var coord_polygon=multi_polygon[k].split(" ");
+									polygon.push([parseFloat(coord_polygon[1]),parseFloat(coord_polygon[0])]);
+								}
+								console.log(polygon);
+								polygon_final.push(polygon);
+							}
+							nb_polygon= polygon_initial.length;
+						}
+						
+						else{	//Si un seul polygon
+							polygon_initial=((geometry.wktGeometrySimplified).substring(10,((geometry.wktGeometrySimplified).length)-3)).split(", ");						
+							console.log(polygon_initial);
+							for ( var j=0;j < polygon_initial.length;j++){
+								var coord_polygon=polygon_initial[j].split(" ");
+								polygon_final.push([parseFloat(coord_polygon[1]),parseFloat(coord_polygon[0])]);
+							}
+							nb_polygon= 1
+						}
+						dataresponse.push({elt_id : response.objet, elt_name : response.info.displayName, lat : geometry.center.lat, lon : geometry.center.lng, bounds : geometry.bounds,'nb_polygon': nb_polygon, polygon: polygon_final, pop : response.info.attributes.population, type : 2, err : 0});
+					}
+					
+				},function(error){
 					dataresponse.push({elt_id : response.objet, type: 2, err: 2});
 				});
 					
-				promesse.done(function(response){
-						
+				promesse.done(function(){
 					compteur +=1
 					if (compteur== liste.length){
 						resolve(dataresponse);
@@ -135,10 +184,6 @@ router.post('/',function(req,res){
 	
 });
 
-
-	
-
-
 //Fonction de verification du type d'un element
 
 function checktype(elt){
@@ -149,12 +194,13 @@ function checktype(elt){
 		return 1;
 	}
 	else{
-		return 2;}
+		return 2;
+	}
 };
 
 function setcoord(elt){
 	var tabcoord= elt.split(regsplitlatlon);
-		tabcoord.push(elt);
+	tabcoord.push(elt);
 	return tabcoord;
 };
 
