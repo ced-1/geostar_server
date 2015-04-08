@@ -132,7 +132,7 @@ router.post('/',function(req,res){
 					}
 				}
 
-				xhr.open("GET","http://coko.synology.me:8081/fulltext/fulltextsearch?q="+liste[i].elt_id+"&allwordsrequired=true&country=&spellchecking=true&__checkbox_spellchecking=true=&format=JSON&from=1&to=1",true)
+				xhr.open("GET","http://coko.synology.me:8081/fulltext/fulltextsearch?q="+element+"&allwordsrequired=true&country=&spellchecking=true&__checkbox_spellchecking=true=&format=JSON&from=1&to=1",true)
 				xhr.send();});
 
 				promesse.then(function(response){
