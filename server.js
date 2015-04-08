@@ -40,8 +40,17 @@ router.post('/',function(req,res){
 		function(resolve,reject){
 	var compteur=0;
 	for (var i=0;i<liste.length;i++){
-		switch(checktype(liste[i].elt_id)){
-			case 0:		//Traitement des elements type coordonnees
+		var element;
+		if((liste[i].elt_id).indexOf(":")>-1){
+			element = liste[i].elt_id.split(":")[0];
+			console.log(element);
+		}
+		else{
+			element = liste[i].elt_id;
+			console.log(element);
+		}
+		switch(checktype(element)){
+			case 0:
 				var promesse= new Promise(function(resolve,reject){
 					resolve(setcoord(liste[i].elt_id));
 					});
@@ -53,34 +62,35 @@ router.post('/',function(req,res){
 							}
 				});
 				break;
-			case 1:		//Traitement des elements type IP
+			case 1:
 				var promesse= new Promise(function(resolve,reject){
-					var ip = (liste[i].elt_id).replace(/ /g,"");
+					var elt_ip= liste[i].elt_id;
+					var ip = (element).replace(/ /g,"");
 
 					cities.getGeoData(ip,function(err,geodata){
-					if(geodata){	//Si l'IP est present dans la base de donnee, on place ses informations dans un objet JSON
-						resolve({elt_id : ip, info : geodata});
+					if(geodata){
+						resolve({elt_id : elt_ip, info : geodata});
 						}
-					else{	//On signale une erreur
-						resolve({elt_id : ip, type : 1, err : 1});
+					else{
+						resolve({elt_id : elt_ip, type : 1, err : 1});
 				}});
 				});
 				promesse.done(function(response){
-					compteur +=1;
-					if (response.err==1){
-						dataresponse.push(response);
-					}
-					else{
-						dataresponse.push({elt_id : response.elt_id , lat : response.info.location.latitude, lon : response.info.location.longitude, type : 1, err : 0});
-					}
+				compteur +=1;
+				if (response.err==1){
+					dataresponse.push(response);
+				}
+				else{
+					dataresponse.push({elt_id : response.elt_id , lat : response.info.location.latitude, lon : response.info.location.longitude, type : 1, err : 0});
+				}
 				
-					if (compteur == liste.length){				
-								resolve(dataresponse);
-						}
-					});
+				if (compteur == liste.length){				
+							resolve(dataresponse);
+					}
+				});
 				break
 			
-			case 2:	//Traitement des autres types d'elements via geocoder
+			case 2:
 				var promesse= new Promise(
 					function(resolve,reject){
 				var dico =  {};
@@ -90,29 +100,29 @@ router.post('/',function(req,res){
 				if (xhr.status == 200) {	//Si status requete 200, on stock le resultat de la requete
 					var res=JSON.parse(xhr.responseText);	//parsing JSON du resultat de la requete
 					console.log(res.response.docs[0]);		
-					if(res.response.numFound!=0){	// Si correspondance, on passe la requete dans twofishes
-						var promesse= new Promise(
-						function(resolve,reject){
-							var xhr= new XMLHttpRequest();
-							xhr.onload = function() {
-								if (xhr.status == 200) {
-									resolve(JSON.parse(xhr.responseText));
-									}
-								else if (xhr.status!=200){
-									reject(Error(xhr.status));
-									}
-								}
-
-							xhr.open("GET","http://localhost:8083/?debug=0&responseIncludes=WKT_GEOMETRY_SIMPLIFIED&&query="+res.response.docs[0].name_ascii+","+res.response.docs[0].country_name,true);
-							xhr.send();
-							});
-
-						promesse.then(function(response){
-							dico['info']=response.interpretations[0].feature;	//Contient les valeurs utiles recupére depuis twofishes
-							resolve(dico);
-							});
+					if(res.response.numFound!=0){
+					var promesse= new Promise(
+					function(resolve,reject){
+					var xhr= new XMLHttpRequest();
+					xhr.onload = function() {
+					if (xhr.status == 200) {
+						resolve(JSON.parse(xhr.responseText));
 						}
-					else if(res.response.numFound==0){	//Sinon on signale qu'il n'y a pas de correspondance
+					else if (xhr.status!=200){
+						reject(Error(xhr.status));
+						}
+					}
+					console.log(res.response.docs[0].name+","+res.response.docs[0].country_name);
+					xhr.open("GET","http://coko.synology.me:8083/?debug=0&responseIncludes=WKT_GEOMETRY_SIMPLIFIED&&query="+res.response.docs[0].name_ascii+","+res.response.docs[0].country_name,true);
+					xhr.send();
+					});
+
+					promesse.then(function(response){
+					dico['info']=response.interpretations[0].feature;
+					resolve(dico);
+					});
+					}
+					else if(res.response.numFound==0){
 						dico['info']=0;
 						resolve(dico);
 						}
@@ -122,20 +132,20 @@ router.post('/',function(req,res){
 					}
 				}
 
-				xhr.open("GET","http://localhost:8081/fulltext/fulltextsearch?q="+liste[i].elt_id+"&placetype=city&placetype=country&placetype=adm&__multiselect_placetype=&format=JSON&from=1&to=1",true)
+				xhr.open("GET","http://coko.synology.me:8081/fulltext/fulltextsearch?q="+liste[i].elt_id+"&allwordsrequired=true&country=&spellchecking=true&__checkbox_spellchecking=true=&format=JSON&from=1&to=1",true)
 				xhr.send();});
 
 				promesse.then(function(response){
 					if(response.info==0){	//Pas de correspondance
 						dataresponse.push({elt_id : response.objet, type: 2, err: 1});
 						}
-					else{	//Correspondance, traitement des polygones
+					else{
 						var geometry=response.info.geometry;
 						var polygon_final= new Array();
 						var polygon_initial;
 						var nb_polygon;
 						if(geometry.wktGeometrySimplified){
-						if((geometry.wktGeometrySimplified).substring(0,5)=="MULTI"){	//dans le cas de multipolygon
+						if((geometry.wktGeometrySimplified).substring(0,5)=="MULTI"){
 							polygon_initial=((geometry.wktGeometrySimplified).substring(15,((geometry.wktGeometrySimplified).length)-3)).split("), (");
 
 							for (var j=0;j<polygon_initial.length;j++){
@@ -145,19 +155,20 @@ router.post('/',function(req,res){
 									var coord_polygon=multi_polygon[k].split(" ");
 									polygon.push([parseFloat(coord_polygon[1]),parseFloat(coord_polygon[0])]);
 								}
-								console.log(polygon);
+								//console.log(polygon);
 								polygon_final.push(polygon);
 							}
 							nb_polygon= polygon_initial.length;
 						}
 						
-						else{	//Si un seul polygon
+						else{
 							polygon_initial=((geometry.wktGeometrySimplified).substring(10,((geometry.wktGeometrySimplified).length)-3)).split(", ");						
 							console.log(polygon_initial);
 							for ( var j=0;j < polygon_initial.length;j++){
 								var coord_polygon=polygon_initial[j].split(" ");
 								polygon_final.push([parseFloat(((coord_polygon[1].replace("(","")).replace("(",""))),parseFloat(((coord_polygon[0].replace("(","")).replace("(","")))]);
 							}
+							console.log(polygon_final);
 							nb_polygon= 1
 						}
 						dataresponse.push({elt_id : response.objet, elt_name : response.info.displayName, lat : geometry.center.lat, lon : geometry.center.lng, bounds : geometry.bounds,'nb_polygon': nb_polygon, polygon: polygon_final, pop : response.info.attributes.population, type : 2, err : 0});
@@ -165,6 +176,7 @@ router.post('/',function(req,res){
 					else{
 						dataresponse.push({elt_id : response.objet, elt_name : response.info.displayName, lat : geometry.center.lat, lon : geometry.center.lng, bounds : geometry.bounds, pop : response.info.attributes.population, type : 2, err : 0});
 					}
+					
 				}},function(error){
 					dataresponse.push({elt_id : response.objet, type: 2, err: 2});
 				});
@@ -181,7 +193,7 @@ router.post('/',function(req,res){
 		}
 	});
 	promessefinal.done(function(response){
-		res.send(JSON.stringify(response));	//Envoie du JSON contenant les information des differents elements recherches
+		res.send(JSON.stringify(response));
 	});
 
 	
