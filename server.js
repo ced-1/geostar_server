@@ -6,7 +6,7 @@ var server = http.createServer(router);
 var Promise = require('promise');
 var mmdbreader = require('maxmind-db-reader');
 var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
-var cities = mmdbreader.openSync('./GeoLite2-City.mmdb');	//BDD IP
+var cities = mmdbreader.openSync(__dirname+'/GeoLite2-City.mmdb');	//BDD IP
 
 
 //Liste des expression reguliere:
