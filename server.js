@@ -112,13 +112,17 @@ router.post('/',function(req,res){
 						reject(Error(xhr.status));
 						}
 					}
-					console.log(res.response.docs[0].name+","+res.response.docs[0].country_name);
-					xhr.open("GET","http://coko.synology.me:8083/?debug=0&responseIncludes=WKT_GEOMETRY_SIMPLIFIED&&query="+res.response.docs[0].name_ascii+","+res.response.docs[0].country_name,true);
+					dico['gisgraphy']=res.response.docs[0];
+					xhr.open("GET","http://coko.synology.me:8083/?debug=0&responseIncludes=WKT_GEOMETRY_SIMPLIFIED&slug=geonameid:"+res.response.docs[0].feature_id,true);
 					xhr.send();
 					});
 
 					promesse.then(function(response){
+					if(response.interpretations.length==0){
+						console.log("pas de correspondance twofishes");
+					}else{
 					dico['info']=response.interpretations[0].feature;
+					}
 					resolve(dico);
 					});
 					}
