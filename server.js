@@ -35,6 +35,7 @@ router.get('/test', function (req, res) { res.send("NodeJS fonctionne!") });
 router.post('/',function(req,res){
 	res.setHeader('Content-Type', 'application/json');
 	var liste= (req.body.elt);
+	var placetype=(req.body.placetype);
 	var dataresponse = new Array;
 	var promessefinal= new Promise(
 		function(resolve,reject){
@@ -95,6 +96,18 @@ router.post('/',function(req,res){
 					function(resolve,reject){
 				var dico =  {};
 				dico['objet'] = liste[i].elt_id;
+				var complementquery;
+				if(!(placetype)){
+					complementquery="";
+				}
+				else if(placetype.length>0){
+					complementquery="";
+					for (var compteur=0;compteur<placetype.length;compteur++){
+						complementquery+="&placetype="+placetype[compteur];
+					}
+					complementquery+="&__multiselect_placetype=";
+				}
+				
 				var xhr= new XMLHttpRequest();
 				xhr.onload = function() {
 				if (xhr.status == 200) {	//Si status requete 200, on stock le resultat de la requete
@@ -136,7 +149,7 @@ router.post('/',function(req,res){
 					}
 				}
 
-				xhr.open("GET","http://coko.synology.me:8081/fulltext/fulltextsearch?q="+element+"&allwordsrequired=true&country=&spellchecking=true&__checkbox_spellchecking=true=&format=JSON&from=1&to=1",true)
+				xhr.open("GET","http://coko.synology.me:8081/fulltext/fulltextsearch?q="+element+complementquery+"&allwordsrequired=true&country=&spellchecking=true&__checkbox_spellchecking=true=&format=JSON&from=1&to=1",true)
 				xhr.send();});
 
 				promesse.then(function(response){
