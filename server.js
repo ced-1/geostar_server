@@ -1,4 +1,4 @@
-var http = require('http');
+﻿var http = require('http');
 var path = require('path');
 var express = require('express');
 var router = express();
@@ -42,18 +42,18 @@ router.post('/',function(req,res){
 	var compteur=0;
 	for (var i=0;i<liste.length;i++){
 		var element;
-		if((liste[i].elt_id).indexOf(":")>-1){
-			element = liste[i].elt_id.split(":")[0];
+		if((liste[i]).indexOf(":")>-1){
+			element = liste[i].split(":")[0];
 			console.log(element);
 		}
 		else{
-			element = liste[i].elt_id;
+			element = liste[i];
 			console.log(element);
 		}
 		switch(checktype(element)){
 			case 0:
 				var promesse= new Promise(function(resolve,reject){
-					resolve(setcoord(liste[i].elt_id));
+					resolve(setcoord(liste[i]));
 					});
 				promesse.done(function(response){			
 					dataresponse.push({elt_id : response[2], lat : response[0], lon : response[1], type : 0, err : 0});
@@ -65,7 +65,7 @@ router.post('/',function(req,res){
 				break;
 			case 1:
 				var promesse= new Promise(function(resolve,reject){
-					var elt_ip= liste[i].elt_id;
+					var elt_ip= liste[i];
 					var ip = (element).replace(/ /g,"");
 
 					cities.getGeoData(ip,function(err,geodata){
@@ -95,7 +95,7 @@ router.post('/',function(req,res){
 				var promesse= new Promise(
 					function(resolve,reject){
 				var dico =  {};
-				dico['objet'] = liste[i].elt_id;
+				dico['objet'] = liste[i];
 				var complementquery;
 				if(!(placetype)){
 					complementquery="";
@@ -112,7 +112,7 @@ router.post('/',function(req,res){
 				xhr.onload = function() {
 				if (xhr.status == 200) {	//Si status requete 200, on stock le resultat de la requete
 					var res=JSON.parse(xhr.responseText);	//parsing JSON du resultat de la requete
-					console.log(res.response.docs[0]);		
+					//console.log(res.response.docs[0]);		
 					if(res.response.numFound!=0){
 					var promesse= new Promise(
 					function(resolve,reject){
@@ -156,6 +156,11 @@ router.post('/',function(req,res){
 					if(response.info==0){	//Pas de correspondance
 						dataresponse.push({elt_id : response.objet, type: 2, err: 1});
 						}
+					else if(!response.info){
+						var gisgraphydata=response.gisgraphy;
+						console.log(gisgraphydata);
+						dataresponse.push({elt_id : response.objet, elt_name : gisgraphydata.name, lat : gisgraphydata.lat, lon : gisgraphydata.lng, type : 2, err : 0});
+					}
 					else{
 						var geometry=response.info.geometry;
 						var polygon_final= new Array();
@@ -180,12 +185,12 @@ router.post('/',function(req,res){
 						
 						else{
 							polygon_initial=((geometry.wktGeometrySimplified).substring(10,((geometry.wktGeometrySimplified).length)-3)).split(", ");						
-							console.log(polygon_initial);
+							//console.log(polygon_initial);
 							for ( var j=0;j < polygon_initial.length;j++){
 								var coord_polygon=polygon_initial[j].split(" ");
 								polygon_final.push([parseFloat(((coord_polygon[1].replace("(","")).replace("(",""))),parseFloat(((coord_polygon[0].replace("(","")).replace("(","")))]);
 							}
-							console.log(polygon_final);
+							//console.log(polygon_final);
 							nb_polygon= 1
 						}
 						dataresponse.push({elt_id : response.objet, elt_name : response.info.displayName, lat : geometry.center.lat, lon : geometry.center.lng, bounds : geometry.bounds,'nb_polygon': nb_polygon, polygon: polygon_final, pop : response.info.attributes.population, type : 2, err : 0});
