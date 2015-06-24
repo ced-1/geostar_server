@@ -126,7 +126,7 @@ router.post('/',function(req,res){
 						}
 					}
 					dico['gisgraphy']=res.response.docs[0];
-					xhr.open("GET","http://coko.synology.me:8083/?debug=0&responseIncludes=WKT_GEOMETRY_SIMPLIFIED&slug=geonameid:"+res.response.docs[0].feature_id,true);
+					xhr.open("GET","http://localhost:8083/?debug=0&responseIncludes=WKT_GEOMETRY_SIMPLIFIED&slug=geonameid:"+res.response.docs[0].feature_id,true);
 					xhr.send();
 					});
 
@@ -149,7 +149,7 @@ router.post('/',function(req,res){
 					}
 				}
 
-				xhr.open("GET","http://coko.synology.me:8081/fulltext/fulltextsearch?q="+element+complementquery+"&allwordsrequired=true&country=&spellchecking=true&__checkbox_spellchecking=true=&format=JSON&from=1&to=1",true)
+				xhr.open("GET","http://localhost:8081/fulltext/fulltextsearch?q="+element+complementquery+"&allwordsrequired=true&country=&spellchecking=true&__checkbox_spellchecking=true=&format=JSON&from=1&to=1",true)
 				xhr.send();});
 
 				promesse.then(function(response){
@@ -177,7 +177,6 @@ router.post('/',function(req,res){
 									var coord_polygon=multi_polygon[k].split(" ");
 									polygon.push([parseFloat(coord_polygon[1]),parseFloat(coord_polygon[0])]);
 								}
-								//console.log(polygon);
 								polygon_final.push(polygon);
 							}
 							nb_polygon= polygon_initial.length;
